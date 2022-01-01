@@ -59,7 +59,7 @@ public class Server {
             return GoogleCredentials.fromStream(inputStream);
         } catch (Exception e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return null;
     }
 }
