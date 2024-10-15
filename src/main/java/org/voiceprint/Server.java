@@ -1,7 +1,5 @@
 package org.voiceprint;
 
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.speech.v1.RecognitionConfig;
 import io.netty.bootstrap.ServerBootstrap;
 
 import io.netty.channel.*;
@@ -9,13 +7,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.IOException;
+
 
 public class Server {
 
-    private static final String CREDENTIALS_LOCATION = "ASR_CREDENTIALS_LOCATION";
 
     public static void main(String[] args) throws Exception {
         System.out.println("netty as a service preparation");
@@ -27,10 +23,11 @@ public class Server {
             serverBootstrap.channel(NioServerSocketChannel.class);
             serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(SocketChannel inboundChannel) {
-                    System.out.println("catch the data");
+                protected void initChannel(SocketChannel inboundChannel) throws IOException {
+                    System.out.println("catch the audio data and start categorization process .... ");
                     inboundChannel.pipeline().addLast(
-                            new Asr(createRecognitionConfig(), createAsrCredentials()),
+                            new AwsTranscribeAsr(),
+                            new ContentCategorizer(),
                             new Printer());
                 }
             });
@@ -42,24 +39,6 @@ public class Server {
         } finally {
             slave.shutdownGracefully();
             master.shutdownGracefully();
-        }
-    }
-
-    private static RecognitionConfig createRecognitionConfig() {
-        return RecognitionConfig.newBuilder()
-                .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
-                .setLanguageCode("en-US")
-                .setSampleRateHertz(16_000)
-                .build();
-    }
-
-    private static GoogleCredentials createAsrCredentials() {
-        String credentialsLocationValue = System.getenv(CREDENTIALS_LOCATION);
-        try (FileInputStream file = new FileInputStream(credentialsLocationValue); InputStream inputStream = new BufferedInputStream(file)) {
-            return GoogleCredentials.fromStream(inputStream);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
         }
     }
 }
