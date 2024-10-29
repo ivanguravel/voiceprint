@@ -35,21 +35,6 @@
             <artifactId>ahocorasick</artifactId>
             <version>0.6.3</version>
         </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>transcribe</artifactId>
-            <version>2.28.16</version>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>transcribestreaming</artifactId>
-            <version>2.28.16</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ahocorasick</groupId>
-            <artifactId>ahocorasick</artifactId>
-            <version>0.6.3</version>
-        </dependency>
     </dependencies>
 
 </project>
