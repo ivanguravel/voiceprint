@@ -8,7 +8,6 @@ Fill free to use.
 ### How to test quickly
 
 - create AWS account and pass AWS credentials in some way;
-- prepare some audio file with English speech in `wav` format  
 - install ffmpeg as described here: https://www.ffmpeg.org/download.html
-- run from the terminal the following command: `ffmpeg -re -i ~/Downloads/Top50AWSServices.wav -acodec pcm_s16le -f s16le -ac 1 -ar 16000 tcp://localhost:8081`
+- run from the terminal the following command: `ffmpeg -re -i Top50AWSServices.wav -acodec pcm_s16le -f s16le -ac 1 -ar 16000 tcp://localhost:8081`
 - see categorized content in the console
