@@ -24,19 +24,19 @@ import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAs
 
 import java.util.Deque;
 
-class AwsTranscribeAsr extends ChannelInboundHandlerAdapter {
+class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
 
-    private final Deque<String> results4delivery;
-    private PipedInputStream voice4recognition;
+    private final Deque<String> deliveryAsrResultsQueue;
+    private PipedInputStream asrInputStream;
     private PipedOutputStream outputStream;
 
     private  AwsAsrDeliveryThread client;
 
-    public AwsTranscribeAsr() throws IOException {
-        this.results4delivery = new ConcurrentLinkedDeque<>();
-        this.voice4recognition = new PipedInputStream();
-        outputStream = new PipedOutputStream(this.voice4recognition);
-        this.client = new AwsAsrDeliveryThread(this.voice4recognition, this.results4delivery);
+    public AwsTranscribeAsrHandler() throws IOException {
+        this.deliveryAsrResultsQueue = new ConcurrentLinkedDeque<>();
+        this.asrInputStream = new PipedInputStream();
+        outputStream = new PipedOutputStream(this.asrInputStream);
+        this.client = new AwsAsrDeliveryThread(this.asrInputStream, this.deliveryAsrResultsQueue);
         this.client.start();
     }
 
@@ -53,8 +53,8 @@ class AwsTranscribeAsr extends ChannelInboundHandlerAdapter {
             this.outputStream.write(byteArray);
 
             // deliver the text after ASR to further topics categorization.
-            while (!results4delivery.isEmpty()) {
-                String words = results4delivery.poll();
+            while (!deliveryAsrResultsQueue.isEmpty()) {
+                String words = deliveryAsrResultsQueue.poll();
                 ctx.fireChannelRead(words);
             }
         } finally {

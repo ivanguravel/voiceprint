@@ -26,8 +26,8 @@ public class Server {
                 protected void initChannel(SocketChannel inboundChannel) throws IOException {
                     System.out.println("catch the audio data and start categorization process .... ");
                     inboundChannel.pipeline().addLast(
-                            new AwsTranscribeAsr(),
-                            new ContentCategorizer(),
+                            new AwsTranscribeAsrHandler(),
+                            new ContentCategorizerHandler(),
                             new Printer());
                 }
             });

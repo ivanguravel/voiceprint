@@ -8,13 +8,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-public class ContentCategorizer extends ChannelInboundHandlerAdapter {
+public class ContentCategorizerHandler extends ChannelInboundHandlerAdapter {
 
     private final Map<String, PayloadTrie<String>> categories = new ConcurrentHashMap<>();
-    Deque<String> input = new ConcurrentLinkedDeque<>();
-    Deque<String> output = new ConcurrentLinkedDeque<>();
+    Deque<String> deliveryAsrResultsQueue = new ConcurrentLinkedDeque<>();
+    Deque<String> deliveryCategorizationResultsQueue = new ConcurrentLinkedDeque<>();
 
-    public ContentCategorizer() {
+    public ContentCategorizerHandler() {
         categories.put("Amazon", buildTrieFromWords(Arrays.asList(
                 "Amazon",
                 "AWS",
@@ -30,13 +30,13 @@ public class ContentCategorizer extends ChannelInboundHandlerAdapter {
                 "Platform"
         )));
 
-        new Thread(new ContentFinder()).start();
+        new Thread(new ContentCategorizationWorker()).start();
     }
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        input.add(msg.toString());
-        while (!output.isEmpty()) {
-            ctx.fireChannelRead(output.poll());
+        deliveryAsrResultsQueue.add(msg.toString());
+        while (!deliveryCategorizationResultsQueue.isEmpty()) {
+            ctx.fireChannelRead(deliveryCategorizationResultsQueue.poll());
         }
     }
 
@@ -55,17 +55,17 @@ public class ContentCategorizer extends ChannelInboundHandlerAdapter {
     }
 
 
-    class ContentFinder implements Runnable {
+    class ContentCategorizationWorker implements Runnable {
         @Override
         public void run() {
             while (true) {
-                while (!input.isEmpty()) {
-                    String message = input.poll();
+                while (!deliveryAsrResultsQueue.isEmpty()) {
+                    String message = deliveryAsrResultsQueue.poll();
                     Set<String> topics = categories.keySet();
                     for (String topic : topics) {
                         PayloadTrie<String> trie = categories.get(topic);
                         if (!trie.parseText(message).isEmpty()) {
-                            output.add(String.format("%s  -->  %s", topic, message));
+                            deliveryCategorizationResultsQueue.add(String.format("%s  -->  %s", topic, message));
                         }
                     }
                 }
