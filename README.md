@@ -1,7 +1,7 @@
 # Audio Content Categorization in streaming
 
 This is a simple service which will help you to do the content categorization.
-It's based on Netty + Aho-Corasick (could be replaced by the categorization neural network).
+It's based on AWS Transcribe + Netty + Aho-Corasick (could be replaced by the categorization neural network).
 
 Fill free to use.
 
