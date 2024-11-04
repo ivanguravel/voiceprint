@@ -3,7 +3,7 @@ package org.voiceprint;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.voiceprint.aws.TranscribeStreamingSynchronousClient;
+import org.voiceprint.aws.TranscribeStreamingClientWrapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,16 +19,14 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
-import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
-
 
 import java.util.Deque;
 
 class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
 
     private final Deque<String> deliveryAsrResultsQueue;
-    private PipedInputStream asrInputStream;
-    private PipedOutputStream outputStream;
+    private final PipedInputStream asrInputStream;
+    private final PipedOutputStream outputStream;
 
     private  AwsAsrDeliveryThread client;
 
@@ -66,30 +64,30 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
     private static class AwsAsrDeliveryThread extends Thread {
 
         private final InputStream inputStream;
-        private final Deque<String> results4delivery;
+        private final Deque<String> deliveryAsrResultsQueue;
 
-        private  TranscribeStreamingSynchronousClient synchronousClient;
+        private TranscribeStreamingClientWrapper asrClient;
 
 
         public AwsAsrDeliveryThread(InputStream inputStream,
-                                    Deque<String> results4delivery) {
+                                    Deque<String> deliveryAsrResultsQueue) {
 
             this.inputStream = inputStream;
-            this.results4delivery = results4delivery;
-            this.synchronousClient = new TranscribeStreamingSynchronousClient(getClient(), this.results4delivery);
+            this.deliveryAsrResultsQueue = deliveryAsrResultsQueue;
+            this.asrClient = new TranscribeStreamingClientWrapper(getClient(), this.deliveryAsrResultsQueue);
         }
 
         @Override
         public void run() {
-            this.synchronousClient.transcribe(this.inputStream);
+            this.asrClient.transcribe(this.inputStream);
         }
     }
 
-    public static TranscribeStreamingAsyncClient getClient() {
+    public static software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient getClient() {
         Region region = getRegion();
         String endpoint = "https://transcribestreaming." + region.toString().toLowerCase().replace('_','-') + ".amazonaws.com";
         try {
-            return TranscribeStreamingAsyncClient.builder()
+            return software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient.builder()
                     .credentialsProvider(getCredentials())
                     .endpointOverride(new URI(endpoint))
                     .region(region)

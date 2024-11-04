@@ -14,17 +14,15 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class TranscribeStreamingSynchronousClient {
-
-    public static final int MAX_TIMEOUT_MS = 15 * 60 * 1000; //15 minutes
+public class TranscribeStreamingClientWrapper {
 
     private final TranscribeStreamingAsyncClient asyncClient;
-    private final Deque<String> results4delivery;
+    private final Deque<String> deliveryAsrResultsQueue;
 
-    public TranscribeStreamingSynchronousClient(TranscribeStreamingAsyncClient asyncClient,
-                                                Deque<String> results4delivery) {
+    public TranscribeStreamingClientWrapper(TranscribeStreamingAsyncClient asyncClient,
+                                            Deque<String> deliveryAsrResultsQueue) {
         this.asyncClient = asyncClient;
-        this.results4delivery = results4delivery;
+        this.deliveryAsrResultsQueue = deliveryAsrResultsQueue;
     }
 
     public void transcribe(InputStream audio) {
@@ -38,12 +36,10 @@ public class TranscribeStreamingSynchronousClient {
             AudioStreamPublisher audioStream = new AudioStreamPublisher(audio);
 
             StartStreamTranscriptionResponseHandler responseHandler = getResponseHandler();
-            CompletableFuture<Void> resultFuture = asyncClient.startStreamTranscription(request, audioStream, responseHandler);
-
-            // blocks until all stream will be recognized
-            resultFuture.get();
+            CompletableFuture<Void> resultFuture = asyncClient
+                    .startStreamTranscription(request, audioStream, responseHandler);
+            completeAsync(resultFuture);
         }  catch (Exception e) {
-            System.out.println("Stream not closed within timeout window of " + MAX_TIMEOUT_MS + " ms");
             throw new RuntimeException(e);
         }
     }
@@ -62,7 +58,7 @@ public class TranscribeStreamingSynchronousClient {
                                 !firstResult.alternatives().get(0).transcript().isEmpty()) {
                             String transcript = firstResult.alternatives().get(0).transcript();
                             if(!transcript.isEmpty() && !firstResult.isPartial()) {
-                                results4delivery.add(transcript);
+                                deliveryAsrResultsQueue.add(transcript);
                             }
                         }
 
@@ -70,4 +66,14 @@ public class TranscribeStreamingSynchronousClient {
                 }).build();
     }
 
+    private void completeAsync(CompletableFuture<Void> resultFuture) {
+        resultFuture.whenComplete((used, throwable) -> {
+            if (throwable != null) {
+                throwable.printStackTrace();
+            } else {
+                System.out.println("audio stream has been finished");
+            }
+            asyncClient.close();
+        });
+    }
 }

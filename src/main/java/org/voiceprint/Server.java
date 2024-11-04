@@ -15,11 +15,14 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
         System.out.println("netty as a service preparation");
-        EventLoopGroup master = new NioEventLoopGroup();
-        EventLoopGroup slave = new NioEventLoopGroup();
+        EventLoopGroup main = new NioEventLoopGroup(
+                Thread.ofPlatform()
+                        .name("voiceprint-event-main-loop").factory());
+        EventLoopGroup worker = new NioEventLoopGroup(Thread.ofPlatform()
+                .name("voiceprint-event-worker-loop").factory());
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
-            serverBootstrap.group(master, slave);
+            serverBootstrap.group(main, worker);
             serverBootstrap.channel(NioServerSocketChannel.class);
             serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
@@ -28,7 +31,7 @@ public class Server {
                     inboundChannel.pipeline().addLast(
                             new AwsTranscribeAsrHandler(),
                             new ContentCategorizerHandler(),
-                            new Printer());
+                            new PrintHandler());
                 }
             });
 
@@ -37,8 +40,8 @@ public class Server {
             channel.closeFuture().sync();
 
         } finally {
-            slave.shutdownGracefully();
-            master.shutdownGracefully();
+            worker.shutdownGracefully();
+            main.shutdownGracefully();
         }
     }
 }
