@@ -24,11 +24,11 @@ import java.util.Deque;
 class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
 
     private final Deque<String> deliveryAsrResultsQueue;
-    private  AwsAsrDeliveryThread asrWorker;
+    private AwsAsrDeliveryWorker asrWorker;
 
     public AwsTranscribeAsrHandler() throws IOException {
         this.deliveryAsrResultsQueue = new ConcurrentLinkedDeque<>();
-        this.asrWorker = new AwsAsrDeliveryThread(this.deliveryAsrResultsQueue);
+        this.asrWorker = new AwsAsrDeliveryWorker(this.deliveryAsrResultsQueue);
         this.asrWorker.start();
     }
 
@@ -55,7 +55,7 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
     }
 
 
-    private static class AwsAsrDeliveryThread extends Thread {
+    private static class AwsAsrDeliveryWorker extends Thread {
 
         private final PipedInputStream asrInputStream;
         private final PipedOutputStream outputStream;
@@ -64,7 +64,7 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
         private TranscribeStreamingClientWrapper asrClient;
 
 
-        public AwsAsrDeliveryThread(Deque<String> deliveryAsrResultsQueue) throws IOException {
+        public AwsAsrDeliveryWorker(Deque<String> deliveryAsrResultsQueue) throws IOException {
             this.asrInputStream = new PipedInputStream();
             this.outputStream = new PipedOutputStream(this.asrInputStream);
             this.deliveryAsrResultsQueue = deliveryAsrResultsQueue;

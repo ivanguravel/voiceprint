@@ -14,7 +14,7 @@ public class ContentCategorizerHandler extends ChannelInboundHandlerAdapter {
     LinkedBlockingDeque<String> deliveryAsrResultsQueue = new LinkedBlockingDeque<>();
     Deque<String> deliveryCategorizationResultsQueue = new ConcurrentLinkedDeque<>();
 
-    private final Thread categorizationWorker;
+    private final ContentCategorizationWorker categorizationWorker;
 
     public ContentCategorizerHandler() {
 
@@ -34,7 +34,7 @@ public class ContentCategorizerHandler extends ChannelInboundHandlerAdapter {
                         "Platform"
                 ));
 
-        this.categorizationWorker = new Thread(new ContentCategorizationWorker());
+        this.categorizationWorker = new ContentCategorizationWorker();
         this.categorizationWorker.start();
     }
     @Override
@@ -60,7 +60,7 @@ public class ContentCategorizerHandler extends ChannelInboundHandlerAdapter {
     }
 
 
-    class ContentCategorizationWorker implements Runnable {
+    class ContentCategorizationWorker extends Thread {
         @Override
         public void run() {
             while (!Thread.currentThread().isInterrupted()) {
