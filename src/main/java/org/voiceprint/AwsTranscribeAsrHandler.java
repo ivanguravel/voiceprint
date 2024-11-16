@@ -119,4 +119,10 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
         buffer.getBytes(buffer.readerIndex(), bytes);
         return ByteBuffer.wrap(bytes);
     }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        super.channelUnregistered(ctx);
+        asrWorker.interrupt();
+    }
 }
