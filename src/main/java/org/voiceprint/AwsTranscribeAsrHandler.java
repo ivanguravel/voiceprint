@@ -6,7 +6,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.voiceprint.aws.TranscribeStreamingClientWrapper;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URI;
@@ -25,17 +24,12 @@ import java.util.Deque;
 class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
 
     private final Deque<String> deliveryAsrResultsQueue;
-    private final PipedInputStream asrInputStream;
-    private final PipedOutputStream outputStream;
-
-    private  AwsAsrDeliveryThread client;
+    private  AwsAsrDeliveryThread asrWorker;
 
     public AwsTranscribeAsrHandler() throws IOException {
         this.deliveryAsrResultsQueue = new ConcurrentLinkedDeque<>();
-        this.asrInputStream = new PipedInputStream();
-        outputStream = new PipedOutputStream(this.asrInputStream);
-        this.client = new AwsAsrDeliveryThread(this.asrInputStream, this.deliveryAsrResultsQueue);
-        this.client.start();
+        this.asrWorker = new AwsAsrDeliveryThread(this.deliveryAsrResultsQueue);
+        this.asrWorker.start();
     }
 
     @Override
@@ -48,7 +42,7 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
             byteBuffer.get(byteArray);
 
             // send audio for recognition.
-            this.outputStream.write(byteArray);
+            this.asrWorker.addMessage(byteArray);
 
             // deliver the text after ASR to further topics categorization.
             while (!deliveryAsrResultsQueue.isEmpty()) {
@@ -63,23 +57,27 @@ class AwsTranscribeAsrHandler extends ChannelInboundHandlerAdapter {
 
     private static class AwsAsrDeliveryThread extends Thread {
 
-        private final InputStream inputStream;
+        private final PipedInputStream asrInputStream;
+        private final PipedOutputStream outputStream;
         private final Deque<String> deliveryAsrResultsQueue;
 
         private TranscribeStreamingClientWrapper asrClient;
 
 
-        public AwsAsrDeliveryThread(InputStream inputStream,
-                                    Deque<String> deliveryAsrResultsQueue) {
-
-            this.inputStream = inputStream;
+        public AwsAsrDeliveryThread(Deque<String> deliveryAsrResultsQueue) throws IOException {
+            this.asrInputStream = new PipedInputStream();
+            this.outputStream = new PipedOutputStream(this.asrInputStream);
             this.deliveryAsrResultsQueue = deliveryAsrResultsQueue;
             this.asrClient = new TranscribeStreamingClientWrapper(getClient(), this.deliveryAsrResultsQueue);
         }
 
         @Override
         public void run() {
-            this.asrClient.transcribe(this.inputStream);
+            this.asrClient.transcribe(this.asrInputStream);
+        }
+
+        public void addMessage(byte[] message) throws IOException {
+            this.outputStream.write(message);
         }
     }
 
