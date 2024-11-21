@@ -9,5 +9,6 @@ Fill free to use.
 
 - create AWS account and pass AWS credentials in some way;
 - install ffmpeg as described here: https://www.ffmpeg.org/download.html
+- run the `Server.java` from your IDE
 - run from the terminal the following command: `ffmpeg -re -i Top50AWSServices.wav -acodec pcm_s16le -f s16le -ac 1 -ar 16000 tcp://localhost:8081`
 - see categorized content in the console
